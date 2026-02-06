@@ -1,0 +1,8 @@
+
+{
+  "name": "FANS - Gestión de Abonos y Entradas",
+  "description": "Un sistema integral CRM y portal de usuario para la gestión de solicitudes de entradas y abonos para competiciones deportivas, potenciado con IA de última generación para soporte y análisis.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
