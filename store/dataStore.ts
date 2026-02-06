@@ -211,7 +211,51 @@ export const storageService = {
     }
   },
 
-  // Find registration by email or DNI (for login)
+  // --- AUTHENTICATION METHODS ---
+
+  // Sign in with email and password
+  signIn: async (email: string, password: string): Promise<{ session: any; profile: any; error: any }> => {
+    try {
+      const { data: { session }, error: authError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (authError) return { session: null, profile: null, error: authError };
+
+      // Get profile for role
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session?.user.id)
+        .single();
+
+      return { session, profile, error: profileError };
+    } catch (err) {
+      return { session: null, profile: null, error: err };
+    }
+  },
+
+  // Sign out
+  signOut: async () => {
+    await supabase.auth.signOut();
+  },
+
+  // Get current session and profile
+  getCurrentSession: async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', session.user.id)
+      .single();
+
+    return { session, profile };
+  },
+
+  // Find registration by email or DNI (original logic kept for reference/migration)
   findRegistration: async (email: string, dni: string): Promise<Registration | null> => {
     try {
       let query = supabase.from('registrations').select('*');

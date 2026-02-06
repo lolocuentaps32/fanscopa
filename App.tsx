@@ -8,9 +8,31 @@ import { storageService } from './store/dataStore';
 const App: React.FC = () => {
   const [session, setSession] = useState<UserSession | null>(null);
   const [email, setEmail] = useState('');
-  const [dni, setDni] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true); // Start as loading to check session
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const result = await storageService.getCurrentSession();
+        if (result && result.session && result.profile) {
+          setSession({
+            email: result.session.user.email || '',
+            role: result.profile.role as 'admin' | 'user',
+            id: result.session.user.id
+          } as any);
+        }
+      } catch (err) {
+        console.error('Session check error:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    checkSession();
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,19 +40,17 @@ const App: React.FC = () => {
     setLoading(true);
 
     try {
-      // Admin login
-      if (email === 'admin@copacrm.com') {
-        setSession({ email, role: 'admin' });
-        return;
-      }
+      const { session: authSession, profile, error: authError } = await storageService.signIn(email, password);
 
-      // User login - search in Supabase
-      const found = await storageService.findRegistration(email, dni);
-
-      if (found) {
-        setSession({ email: found.EMAIL, dni: found.DNI, role: 'user' });
-      } else {
-        setError('No se encontró ninguna solicitud con estos datos. Prueba con admin@copacrm.com para ver el panel de control.');
+      if (authError) {
+        setError('Credenciales incorrectas. Por favor, inténtalo de nuevo.');
+        console.error('Auth error:', authError);
+      } else if (authSession && profile) {
+        setSession({
+          email: email,
+          role: profile.role as 'admin' | 'user',
+          id: authSession.user.id
+        } as any);
       }
     } catch (err) {
       console.error('Login error:', err);
@@ -40,18 +60,29 @@ const App: React.FC = () => {
     }
   };
 
-  const handleLogout = () => setSession(null);
+  const handleLogout = async () => {
+    await storageService.signOut();
+    setSession(null);
+  };
+
+  if (loading && !session) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-sky-50">
+        <div className="animate-spin h-10 w-10 border-4 border-[#0D88CA] border-t-transparent rounded-full"></div>
+      </div>
+    );
+  }
 
   if (!session) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-500 via-purple-500 to-indigo-900">
-        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500">
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-[#0D88CA] to-[#003CA6]">
+        <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl border border-white/20 overflow-hidden animate-in fade-in zoom-in duration-500">
           <div className="p-8 pb-0 text-center">
-            <div className="w-20 h-20 bg-indigo-100 rounded-2xl flex items-center justify-center mx-auto mb-6 text-indigo-600">
-              <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+            <div className="w-24 h-24 bg-white rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-sm border border-slate-100">
+              <img src="https://i.imgur.com/77mlnlA.png" alt="Viña Albali Valdepeñas" className="w-20 h-20 object-contain" />
             </div>
-            <h1 className="text-4xl font-black text-slate-800 tracking-tight">FANS</h1>
-            <p className="text-slate-500 mt-3 font-medium">Gestiona tus entradas y abonos con el poder de la IA</p>
+            <h1 className="text-2xl font-black text-[#0D88CA] tracking-tight uppercase">Viña Albali Valdepeñas</h1>
+            <p className="text-slate-500 mt-2 font-medium text-sm">Gestión de entradas y abonos<br /><span className="text-[#0D88CA]/70 italic">Copa de España 2026</span></p>
           </div>
 
           <form onSubmit={handleLogin} className="p-8 space-y-4">
@@ -63,32 +94,33 @@ const App: React.FC = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
-                className="w-full border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition disabled:opacity-50"
+                className="w-full border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#0D88CA] focus:border-transparent transition disabled:opacity-50"
                 placeholder="ej: manuel.urba@gmail.com"
               />
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-1">DNI (Para Usuarios)</label>
+              <label className="block text-sm font-bold text-slate-700 mb-1">Contraseña</label>
               <input
-                type="text"
-                value={dni}
-                onChange={(e) => setDni(e.target.value)}
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
                 disabled={loading}
-                className="w-full border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition disabled:opacity-50"
-                placeholder="ej: 45738884A"
+                className="w-full border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-[#0D88CA] focus:border-transparent transition disabled:opacity-50"
+                placeholder="Tu contraseña segura"
               />
             </div>
             {error && <p className="text-rose-500 text-xs font-medium bg-rose-50 p-2 rounded-lg border border-rose-100">{error}</p>}
             <button
               disabled={loading}
-              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 transition transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full bg-[#0D88CA] hover:bg-[#0c7ab5] text-white font-bold py-4 rounded-xl shadow-lg shadow-[#0D88CA]/20 transition transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {loading && <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>}
               {loading ? 'Verificando...' : 'Acceder al Portal'}
             </button>
           </form>
           <div className="px-8 pb-8 text-center text-xs text-slate-400">
-            Al acceder aceptas los términos y condiciones de FANS.
+            Al acceder aceptas los términos y condiciones de Viña Albali Valdepeñas.
           </div>
         </div>
       </div>
@@ -99,16 +131,18 @@ const App: React.FC = () => {
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center border border-slate-100 p-1">
+              <img src="https://i.imgur.com/77mlnlA.png" alt="Icon" className="w-8 h-8 object-contain" />
             </div>
-            <span className="text-xl font-black text-slate-800 tracking-tight">FANS</span>
+            <span className="text-lg font-black text-[#0D88CA] tracking-tighter uppercase leading-none hidden sm:block">
+              Viña Albali<br /><span className="text-slate-800 text-xs">Valdepeñas</span>
+            </span>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-xs font-bold text-slate-800">{session.email}</p>
-              <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">{session.role === 'admin' ? 'Administrador' : 'Solicitante'}</p>
+              <p className="text-[10px] text-[#0D88CA] font-bold uppercase tracking-widest">{session.role === 'admin' ? 'Administrador' : 'Socio / Aficionado'}</p>
             </div>
             <button
               onClick={handleLogout}

@@ -82,7 +82,7 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
           <h2 className="text-2xl font-bold text-slate-800 mb-2">No se encontró registro</h2>
           <p className="text-slate-600 mb-6">No hemos encontrado ninguna solicitud asociada a tu cuenta. ¿Deseas crear una nueva o contactar con soporte?</p>
           <div className="flex gap-4 justify-center">
-            <button className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-semibold">Nueva Solicitud</button>
+            <button className="bg-[#0D88CA] text-white px-6 py-2 rounded-lg font-semibold">Nueva Solicitud</button>
             <button onClick={onLogout} className="text-slate-600 font-medium">Cerrar sesión</button>
           </div>
         </div>
@@ -112,7 +112,7 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
             <div className="p-6 border-b border-slate-100 flex justify-between items-center">
               <h3 className="text-lg font-semibold text-slate-700">Datos Personales</h3>
               {!isEditing && (
-                <button onClick={() => setIsEditing(true)} className="text-indigo-600 hover:text-indigo-800 text-sm font-medium transition">Editar información</button>
+                <button onClick={() => setIsEditing(true)} className="text-[#0D88CA] hover:text-[#0c7ab5] text-sm font-medium transition">Editar información</button>
               )}
             </div>
             <div className="p-6">
@@ -176,7 +176,7 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
                   <button
                     onClick={handleSave}
                     disabled={saving}
-                    className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold shadow-md shadow-indigo-100 hover:bg-indigo-700 transition disabled:opacity-50 flex items-center gap-2"
+                    className="bg-[#0D88CA] text-white px-6 py-2 rounded-lg font-bold shadow-md shadow-sky-100 hover:bg-[#0c7ab5] transition disabled:opacity-50 flex items-center gap-2"
                   >
                     {saving && <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>}
                     Guardar Cambios
