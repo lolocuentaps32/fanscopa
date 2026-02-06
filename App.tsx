@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserSession, Registration } from './types';
 import AdminDashboard from './components/AdminDashboard';
 import UserPortal from './components/UserPortal';
@@ -11,23 +11,50 @@ const App: React.FC = () => {
   const [email, setEmail] = useState('');
   const [dni, setDni] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [registrations, setRegistrations] = useState<Registration[]>([]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Load registrations for ChatWidget
+  useEffect(() => {
+    if (session) {
+      loadRegistrations();
+    }
+  }, [session]);
+
+  const loadRegistrations = async () => {
+    try {
+      const data = await storageService.getRegistrations();
+      setRegistrations(data);
+    } catch (err) {
+      console.error('Error loading registrations:', err);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
-    if (email === 'admin@copacrm.com') {
-      setSession({ email, role: 'admin' });
-      return;
-    }
+    try {
+      // Admin login
+      if (email === 'admin@copacrm.com') {
+        setSession({ email, role: 'admin' });
+        return;
+      }
 
-    const regs = storageService.getRegistrations();
-    const found = regs.find(r => r.EMAIL === email || r.DNI === dni);
-    
-    if (found) {
-      setSession({ email: found.EMAIL, dni: found.DNI, role: 'user' });
-    } else {
-      setError('No se encontró ninguna solicitud con estos datos. Prueba con admin@copacrm.com para ver el panel de control.');
+      // User login - search in Supabase
+      const found = await storageService.findRegistration(email, dni);
+
+      if (found) {
+        setSession({ email: found.EMAIL, dni: found.DNI, role: 'user' });
+      } else {
+        setError('No se encontró ninguna solicitud con estos datos. Prueba con admin@copacrm.com para ver el panel de control.');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      setError('Error de conexión. Por favor, inténtalo de nuevo.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -48,28 +75,34 @@ const App: React.FC = () => {
           <form onSubmit={handleLogin} className="p-8 space-y-4">
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">Email</label>
-              <input 
-                type="email" 
+              <input
+                type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="w-full border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                disabled={loading}
+                className="w-full border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition disabled:opacity-50"
                 placeholder="ej: manuel.urba@gmail.com"
               />
             </div>
             <div>
               <label className="block text-sm font-bold text-slate-700 mb-1">DNI (Para Usuarios)</label>
-              <input 
-                type="text" 
+              <input
+                type="text"
                 value={dni}
                 onChange={(e) => setDni(e.target.value)}
-                className="w-full border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+                disabled={loading}
+                className="w-full border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition disabled:opacity-50"
                 placeholder="ej: 45738884A"
               />
             </div>
             {error && <p className="text-rose-500 text-xs font-medium bg-rose-50 p-2 rounded-lg border border-rose-100">{error}</p>}
-            <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 transition transform hover:-translate-y-0.5 active:translate-y-0">
-              Acceder al Portal
+            <button
+              disabled={loading}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-200 transition transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {loading && <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>}
+              {loading ? 'Verificando...' : 'Acceder al Portal'}
             </button>
           </form>
           <div className="px-8 pb-8 text-center text-xs text-slate-400">
@@ -85,17 +118,17 @@ const App: React.FC = () => {
       <header className="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
           <div className="flex items-center gap-2">
-             <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
-             </div>
-             <span className="text-xl font-black text-slate-800 tracking-tight">FANS</span>
+            <div className="w-10 h-10 bg-indigo-600 rounded-lg flex items-center justify-center text-white">
+              <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" /></svg>
+            </div>
+            <span className="text-xl font-black text-slate-800 tracking-tight">FANS</span>
           </div>
           <div className="flex items-center gap-4">
             <div className="text-right hidden sm:block">
               <p className="text-xs font-bold text-slate-800">{session.email}</p>
               <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">{session.role === 'admin' ? 'Administrador' : 'Solicitante'}</p>
             </div>
-            <button 
+            <button
               onClick={handleLogout}
               className="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-4 py-2 rounded-lg text-sm transition"
             >
@@ -113,8 +146,8 @@ const App: React.FC = () => {
         )}
       </main>
 
-      <ChatWidget registrations={storageService.getRegistrations()} />
-      
+      <ChatWidget registrations={registrations} />
+
       <footer className="bg-white border-t border-slate-200 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center text-slate-500 text-xs">
           © 2026 FANS - Gestión Inteligente de Tickets. Powered by Gemini Pro & Flash.

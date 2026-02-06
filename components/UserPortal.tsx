@@ -13,33 +13,67 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
   const [data, setData] = useState<Registration | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<Partial<Registration>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    const regs = storageService.getRegistrations();
-    const userReg = regs.find(r => r.EMAIL === session.email || r.DNI === session.dni);
-    if (userReg) {
-      setData(userReg);
-      setFormData(userReg);
-    }
+    loadUserData();
   }, [session]);
 
-  const handleSave = () => {
-    if (data) {
-      storageService.updateRegistration(data.DNI, formData);
-      setData({ ...data, ...formData } as Registration);
-      setIsEditing(false);
+  const loadUserData = async () => {
+    setLoading(true);
+    try {
+      const userReg = await storageService.findRegistration(session.email, session.dni || '');
+      if (userReg) {
+        setData(userReg);
+        setFormData(userReg);
+      }
+    } catch (err) {
+      console.error('Error loading user data:', err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDelete = () => {
+  const handleSave = async () => {
+    if (!data) return;
+
+    setSaving(true);
+    try {
+      await storageService.updateRegistration(data.DNI, formData);
+      setData({ ...data, ...formData } as Registration);
+      setIsEditing(false);
+    } catch (err) {
+      console.error('Error saving data:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!data) return;
+
     if (window.confirm('¿Estás seguro de que deseas eliminar tu solicitud? Esta acción no se puede deshacer.')) {
-      if (data) {
-        storageService.deleteRegistration(data.DNI);
+      try {
+        await storageService.deleteRegistration(data.DNI);
         setData(null);
         onLogout();
+      } catch (err) {
+        console.error('Error deleting registration:', err);
       }
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
+          <p className="text-slate-500 font-medium">Cargando tu información...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!data) {
     return (
@@ -65,9 +99,9 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
           <p className="text-slate-500 mt-1 tracking-wide">Registro #{data.ORDEN_REGISTRO} • Registrado el {data.FECHA_REGISTRO}</p>
         </div>
         <div className={`px-4 py-2 rounded-full font-bold shadow-sm flex items-center gap-2 
-          ${data.STATUS === 'Aceptado' ? 'bg-emerald-100 text-emerald-700' : 
+          ${data.STATUS === 'Aceptado' ? 'bg-emerald-100 text-emerald-700' :
             data.STATUS === 'Pendiente' ? 'bg-amber-100 text-amber-700' :
-            data.STATUS === 'Rechazado' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'}`}>
+              data.STATUS === 'Rechazado' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'}`}>
           <div className={`w-2 h-2 rounded-full animate-pulse ${data.STATUS === 'Aceptado' ? 'bg-emerald-500' : 'bg-amber-500'}`}></div>
           {data.STATUS}
         </div>
@@ -87,10 +121,10 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase">Nombre Completo</label>
                   {isEditing ? (
-                    <input 
+                    <input
                       className="w-full mt-1 border-slate-200 rounded-lg focus:ring-indigo-500"
                       value={formData.NOMBRE}
-                      onChange={(e) => setFormData({...formData, NOMBRE: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, NOMBRE: e.target.value })}
                     />
                   ) : (
                     <div className="text-slate-800 font-medium mt-1">{data.NOMBRE} {data.APELLIDOS}</div>
@@ -103,10 +137,10 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase">Email de contacto</label>
                   {isEditing ? (
-                    <input 
+                    <input
                       className="w-full mt-1 border-slate-200 rounded-lg focus:ring-indigo-500"
                       value={formData.EMAIL}
-                      onChange={(e) => setFormData({...formData, EMAIL: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, EMAIL: e.target.value })}
                     />
                   ) : (
                     <div className="text-slate-800 font-medium mt-1">{data.EMAIL}</div>
@@ -115,10 +149,10 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
                 <div>
                   <label className="text-xs font-semibold text-slate-400 uppercase">Teléfono</label>
                   {isEditing ? (
-                    <input 
+                    <input
                       className="w-full mt-1 border-slate-200 rounded-lg focus:ring-indigo-500"
                       value={formData.TELEFONO}
-                      onChange={(e) => setFormData({...formData, TELEFONO: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, TELEFONO: e.target.value })}
                     />
                   ) : (
                     <div className="text-slate-800 font-medium mt-1">{data.TELEFONO}</div>
@@ -127,20 +161,27 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
                 <div className="sm:col-span-2">
                   <label className="text-xs font-semibold text-slate-400 uppercase">Dirección</label>
                   {isEditing ? (
-                    <input 
+                    <input
                       className="w-full mt-1 border-slate-200 rounded-lg focus:ring-indigo-500"
                       value={formData.DIRECCION}
-                      onChange={(e) => setFormData({...formData, DIRECCION: e.target.value})}
+                      onChange={(e) => setFormData({ ...formData, DIRECCION: e.target.value })}
                     />
                   ) : (
                     <div className="text-slate-800 font-medium mt-1">{data.DIRECCION}, {data.LOCALIDAD} ({data.CP})</div>
                   )}
                 </div>
               </div>
-              
+
               {isEditing && (
                 <div className="mt-8 flex gap-3">
-                  <button onClick={handleSave} className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold shadow-md shadow-indigo-100 hover:bg-indigo-700 transition">Guardar Cambios</button>
+                  <button
+                    onClick={handleSave}
+                    disabled={saving}
+                    className="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold shadow-md shadow-indigo-100 hover:bg-indigo-700 transition disabled:opacity-50 flex items-center gap-2"
+                  >
+                    {saving && <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>}
+                    Guardar Cambios
+                  </button>
                   <button onClick={() => setIsEditing(false)} className="bg-slate-100 text-slate-600 px-6 py-2 rounded-lg font-semibold hover:bg-slate-200 transition">Cancelar</button>
                 </div>
               )}
@@ -149,7 +190,7 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
 
           <div className="bg-indigo-600 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition duration-500">
-               <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/><circle cx="12" cy="12" r="5"/></svg>
+              <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" /><circle cx="12" cy="12" r="5" /></svg>
             </div>
             <h3 className="text-2xl font-bold mb-2">¡Asistente de Voz Activo!</h3>
             <p className="text-indigo-100 mb-6 max-w-md">Habla con nuestra IA para consultar tu estado, realizar cambios o resolver dudas sin necesidad de escribir.</p>
@@ -188,7 +229,7 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
           <div className="bg-rose-50 rounded-2xl p-6 border border-rose-100">
             <h4 className="text-rose-800 font-bold mb-2">Zona de Peligro</h4>
             <p className="text-rose-600 text-sm mb-4">Si deseas retirar tu solicitud, puedes hacerlo aquí. Ten en cuenta que perderás tu número de orden actual.</p>
-            <button 
+            <button
               onClick={handleDelete}
               className="w-full bg-rose-100 text-rose-700 py-2 rounded-lg font-bold hover:bg-rose-200 transition"
             >

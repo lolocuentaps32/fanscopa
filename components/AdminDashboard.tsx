@@ -9,14 +9,31 @@ const AdminDashboard: React.FC = () => {
   const [registrations, setRegistrations] = useState<Registration[]>([]);
   const [analysis, setAnalysis] = useState<any>(null);
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setRegistrations(storageService.getRegistrations());
+    loadRegistrations();
   }, []);
 
-  const handleStatusChange = (dni: string, newStatus: Registration['STATUS']) => {
-    const updated = storageService.updateRegistration(dni, { STATUS: newStatus });
-    setRegistrations(updated);
+  const loadRegistrations = async () => {
+    setLoading(true);
+    try {
+      const data = await storageService.getRegistrations();
+      setRegistrations(data);
+    } catch (err) {
+      console.error('Error loading registrations:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (dni: string, newStatus: Registration['STATUS']) => {
+    try {
+      const updated = await storageService.updateRegistration(dni, { STATUS: newStatus });
+      setRegistrations(updated);
+    } catch (err) {
+      console.error('Error updating status:', err);
+    }
   };
 
   const handleAnalyze = async () => {
@@ -41,11 +58,22 @@ const AdminDashboard: React.FC = () => {
 
   const COLORS = ['#10b981', '#f59e0b', '#3b82f6', '#ef4444'];
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin h-10 w-10 border-4 border-indigo-600 border-t-transparent rounded-full"></div>
+          <p className="text-slate-500 font-medium">Cargando datos...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold text-slate-800">Panel de Administración (CRM)</h1>
-        <button 
+        <button
           onClick={handleAnalyze}
           disabled={loadingAnalysis}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-semibold transition disabled:opacity-50 flex items-center gap-2"
@@ -97,7 +125,7 @@ const AdminDashboard: React.FC = () => {
           <div className="h-64 w-full">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie 
+                <Pie
                   data={[
                     { name: 'VIP', value: registrations.filter(r => r.VIP).length },
                     { name: 'Normal', value: registrations.filter(r => !r.VIP).length }
@@ -150,13 +178,13 @@ const AdminDashboard: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 text-sm font-mono text-slate-500">{reg.DNI}</td>
                   <td className="px-6 py-4">
-                    <select 
+                    <select
                       value={reg.STATUS}
                       onChange={(e) => handleStatusChange(reg.DNI, e.target.value as Registration['STATUS'])}
                       className={`text-xs font-semibold px-2 py-1 rounded-full border-0 focus:ring-2 focus:ring-offset-1 focus:ring-indigo-500 
-                        ${reg.STATUS === 'Aceptado' ? 'bg-emerald-100 text-emerald-700' : 
+                        ${reg.STATUS === 'Aceptado' ? 'bg-emerald-100 text-emerald-700' :
                           reg.STATUS === 'Pendiente' ? 'bg-amber-100 text-amber-700' :
-                          reg.STATUS === 'Rechazado' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'}`}
+                            reg.STATUS === 'Rechazado' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'}`}
                     >
                       <option value="Pendiente">Pendiente</option>
                       <option value="Procesando">Procesando</option>
