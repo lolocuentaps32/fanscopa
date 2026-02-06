@@ -2,7 +2,6 @@
 import React, { useState, useEffect } from 'react';
 import { Registration, UserSession } from '../types';
 import { storageService } from '../store/dataStore';
-import VoiceAssistant from './VoiceAssistant';
 
 interface Props {
   session: UserSession;
@@ -123,7 +122,7 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
                   {isEditing ? (
                     <input
                       className="w-full mt-1 border-slate-200 rounded-lg focus:ring-indigo-500"
-                      value={formData.NOMBRE}
+                      value={formData.NOMBRE || ''}
                       onChange={(e) => setFormData({ ...formData, NOMBRE: e.target.value })}
                     />
                   ) : (
@@ -139,7 +138,7 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
                   {isEditing ? (
                     <input
                       className="w-full mt-1 border-slate-200 rounded-lg focus:ring-indigo-500"
-                      value={formData.EMAIL}
+                      value={formData.EMAIL || ''}
                       onChange={(e) => setFormData({ ...formData, EMAIL: e.target.value })}
                     />
                   ) : (
@@ -151,7 +150,7 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
                   {isEditing ? (
                     <input
                       className="w-full mt-1 border-slate-200 rounded-lg focus:ring-indigo-500"
-                      value={formData.TELEFONO}
+                      value={formData.TELEFONO || ''}
                       onChange={(e) => setFormData({ ...formData, TELEFONO: e.target.value })}
                     />
                   ) : (
@@ -163,7 +162,7 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
                   {isEditing ? (
                     <input
                       className="w-full mt-1 border-slate-200 rounded-lg focus:ring-indigo-500"
-                      value={formData.DIRECCION}
+                      value={formData.DIRECCION || ''}
                       onChange={(e) => setFormData({ ...formData, DIRECCION: e.target.value })}
                     />
                   ) : (
@@ -186,15 +185,6 @@ const UserPortal: React.FC<Props> = ({ session, onLogout }) => {
                 </div>
               )}
             </div>
-          </div>
-
-          <div className="bg-indigo-600 rounded-2xl shadow-xl p-8 text-white relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition duration-500">
-              <svg className="w-24 h-24" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" /><circle cx="12" cy="12" r="5" /></svg>
-            </div>
-            <h3 className="text-2xl font-bold mb-2">¡Asistente de Voz Activo!</h3>
-            <p className="text-indigo-100 mb-6 max-w-md">Habla con nuestra IA para consultar tu estado, realizar cambios o resolver dudas sin necesidad de escribir.</p>
-            <VoiceAssistant registrations={[data]} />
           </div>
         </div>
 

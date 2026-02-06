@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { UserSession, Registration } from './types';
 import AdminDashboard from './components/AdminDashboard';
 import UserPortal from './components/UserPortal';
-import ChatWidget from './components/ChatWidget';
 import { storageService } from './store/dataStore';
 
 const App: React.FC = () => {
@@ -12,23 +11,6 @@ const App: React.FC = () => {
   const [dni, setDni] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const [registrations, setRegistrations] = useState<Registration[]>([]);
-
-  // Load registrations for ChatWidget
-  useEffect(() => {
-    if (session) {
-      loadRegistrations();
-    }
-  }, [session]);
-
-  const loadRegistrations = async () => {
-    try {
-      const data = await storageService.getRegistrations();
-      setRegistrations(data);
-    } catch (err) {
-      console.error('Error loading registrations:', err);
-    }
-  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -145,8 +127,6 @@ const App: React.FC = () => {
           <UserPortal session={session} onLogout={handleLogout} />
         )}
       </main>
-
-      <ChatWidget registrations={registrations} />
 
       <footer className="bg-white border-t border-slate-200 py-6 mt-12">
         <div className="max-w-7xl mx-auto px-4 text-center text-slate-500 text-xs">
